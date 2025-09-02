@@ -99,6 +99,7 @@
 
 <script>
 import { useProductsStore } from '../stores/products.js'
+import { formatTimestamp, formatRelativeTime, debugTimestamp } from '../utils/dateUtils.js'
 
 export default {
   name: 'Products',
@@ -130,6 +131,17 @@ export default {
       try {
         await this.productsStore.fetchProducts({ fresh: true })
         console.log('Products loaded successfully:', this.productsStore.products.length, 'items')
+        
+        // Debug timestamp information for first product
+        if (this.productsStore.products.length > 0) {
+          const firstProduct = this.productsStore.products[0]
+          if (firstProduct.CreatedAt) {
+            debugTimestamp(firstProduct.CreatedAt, `First Product (${firstProduct.Name}) CreatedAt`)
+          }
+          if (firstProduct.UpdatedAt) {
+            debugTimestamp(firstProduct.UpdatedAt, `First Product (${firstProduct.Name}) UpdatedAt`)
+          }
+        }
       } catch (error) {
         console.error('Failed to load products:', error)
       }
@@ -263,6 +275,31 @@ export default {
       
       // Otherwise show as-is
       return Math.round(numPrice).toString()
+    },
+    
+    // Timestamp utility methods
+    formatProductDate(product, field = 'CreatedAt') {
+      const timestamp = product[field]
+      if (!timestamp) return null
+      
+      return formatTimestamp(timestamp, { format: 'short' })
+    },
+    
+    formatProductRelativeTime(product, field = 'CreatedAt') {
+      const timestamp = product[field]
+      if (!timestamp) return null
+      
+      return formatRelativeTime(timestamp)
+    },
+    
+    // Log product timestamps for debugging
+    logProductTimestamps(product) {
+      if (product.CreatedAt) {
+        debugTimestamp(product.CreatedAt, `Product ${product.Name || product.ID} CreatedAt`)
+      }
+      if (product.UpdatedAt) {
+        debugTimestamp(product.UpdatedAt, `Product ${product.Name || product.ID} UpdatedAt`)
+      }
     }
   }
 }
