@@ -7,10 +7,11 @@ export const useProductsStore = defineStore('products', {
     products: [],
     currentProduct: null,
     
-    // Filters (client-side filtering only)
+    // Filters (server-side: status=active, client-side: category & price)
     filters: {
       category: '',
-      priceRange: { min: 0, max: 1000 }
+      priceRange: { min: 0, max: 1000 },
+      status: 'active' // Server-side filter - always active
     },
     
     // Loading states
@@ -72,15 +73,15 @@ export const useProductsStore = defineStore('products', {
   },
 
   actions: {
-    // Fetch all products - simple call to /shop endpoint
+    // Fetch all active products - server filters by status=active
     async fetchProducts(params = {}) {
       this.isLoading = true
       this.error = null
 
       try {
-        console.log('Store: Fetching all products from /shop...')
+        console.log('Store: Fetching active products from /shop with status=active...')
         
-        // Only pass pagination parameters
+        // Pass pagination parameters - status=active is handled in the API service
         const apiParams = {}
         if (!params.fresh && this.pagination.lastKey) {
           apiParams.lastKey = this.pagination.lastKey
@@ -109,7 +110,7 @@ export const useProductsStore = defineStore('products', {
           this.pagination.hasMore = false
         }
 
-        console.log(`Store: Loaded ${productsData.length} products. Total: ${this.products.length}`)
+        console.log(`Store: Loaded ${productsData.length} active products. Total: ${this.products.length}`)
         
       } catch (error) {
         console.error('Store: Error fetching products:', error)
@@ -155,11 +156,12 @@ export const useProductsStore = defineStore('products', {
       console.log('Store: Updated filters:', this.filters)
     },
 
-    // Clear filters
+    // Clear filters (keep status=active for server-side filtering)
     clearFilters() {
       this.filters = {
         category: '',
-        priceRange: { min: 0, max: 1000 }
+        priceRange: { min: 0, max: 1000 },
+        status: 'active' // Always keep active status
       }
       console.log('Store: Cleared filters')
     },
@@ -196,11 +198,11 @@ export const useProductsStore = defineStore('products', {
       this.resetPagination()
     },
 
-    // Search products with current filters (client-side filtering)
+    // Search products with current filters (server-side status, client-side category/price)
     async searchProducts() {
       console.log('Store: Searching products with filters:', this.filters)
-      // Since we do client-side filtering via the filteredProducts getter,
-      // we don't need to make new API calls - just ensure we have all products
+      // Server-side filtering by status=active is automatic
+      // Client-side filtering via filteredProducts getter for category/price
       if (this.products.length === 0) {
         await this.fetchProducts({ fresh: true })
       }

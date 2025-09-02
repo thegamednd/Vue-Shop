@@ -2,23 +2,26 @@ import apiClient from './api.js'
 
 export const productsAPI = {
   /**
-   * Fetch all products - simple GET /shop with no required parameters
-   * @param {Object} params - Optional pagination parameters only
+   * Fetch all products with status=active filter
+   * @param {Object} params - Optional pagination parameters
    * @param {number} params.limit - Limit number of results (optional)
    * @param {string} params.lastKey - For pagination (optional)
    * @returns {Promise} API response
    */
   async getAllProducts(params = {}) {
     try {
-      console.log('Fetching all products from /shop endpoint')
+      console.log('Fetching active products from /shop endpoint with status=active')
       
-      // Only send pagination parameters if provided
-      const queryParams = {}
+      // Always send status=active, plus optional pagination parameters
+      const queryParams = {
+        status: 'active'
+      }
+      
       if (params.limit) queryParams.limit = params.limit
       if (params.lastKey) queryParams.lastKey = params.lastKey
       
       const response = await apiClient.get('/shop', {
-        params: Object.keys(queryParams).length > 0 ? queryParams : undefined
+        params: queryParams
       })
       
       console.log('Products API response:', response.data)
