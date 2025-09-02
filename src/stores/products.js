@@ -7,11 +7,10 @@ export const useProductsStore = defineStore('products', {
     products: [],
     currentProduct: null,
     
-    // Filters
+    // Filters (client-side filtering only)
     filters: {
       category: '',
-      priceRange: { min: 0, max: 1000 },
-      status: 'active'
+      priceRange: { min: 0, max: 1000 }
     },
     
     // Loading states
@@ -73,20 +72,26 @@ export const useProductsStore = defineStore('products', {
   },
 
   actions: {
-    // Fetch all products
+    // Fetch all products - simple call to /shop endpoint
     async fetchProducts(params = {}) {
       this.isLoading = true
       this.error = null
 
       try {
-        console.log('Store: Fetching products...')
-        const response = await productsAPI.getAllProducts({
-          limit: this.pagination.limit,
-          lastKey: this.pagination.lastKey,
-          ...params
-        })
+        console.log('Store: Fetching all products from /shop...')
+        
+        // Only pass pagination parameters
+        const apiParams = {}
+        if (!params.fresh && this.pagination.lastKey) {
+          apiParams.lastKey = this.pagination.lastKey
+        }
+        if (this.pagination.limit) {
+          apiParams.limit = this.pagination.limit
+        }
+        
+        const response = await productsAPI.getAllProducts(apiParams)
 
-        // Handle response structure - could be { products: [...] } or direct array
+        // Handle response structure - API returns { products: [...], count: number }
         const productsData = response.products || response || []
         
         // If this is a fresh fetch, replace products; if pagination, append
@@ -143,28 +148,6 @@ export const useProductsStore = defineStore('products', {
       }
     },
 
-    // Fetch products by category
-    async fetchProductsByCategory(category, params = {}) {
-      this.isLoading = true
-      this.error = null
-      this.filters.category = category
-
-      try {
-        console.log('Store: Fetching products by category:', category)
-        const response = await productsAPI.getProductsByCategory(category, params)
-        
-        const productsData = response.products || response || []
-        this.products = productsData
-
-        console.log(`Store: Loaded ${productsData.length} products for category: ${category}`)
-        
-      } catch (error) {
-        console.error('Store: Error fetching products by category:', error)
-        this.error = error.response?.data?.message || error.message || 'Failed to fetch products'
-      } finally {
-        this.isLoading = false
-      }
-    },
 
     // Update filters
     updateFilters(newFilters) {
@@ -176,8 +159,7 @@ export const useProductsStore = defineStore('products', {
     clearFilters() {
       this.filters = {
         category: '',
-        priceRange: { min: 0, max: 1000 },
-        status: 'active'
+        priceRange: { min: 0, max: 1000 }
       }
       console.log('Store: Cleared filters')
     },
@@ -214,24 +196,14 @@ export const useProductsStore = defineStore('products', {
       this.resetPagination()
     },
 
-    // Search products with current filters
+    // Search products with current filters (client-side filtering)
     async searchProducts() {
-      this.resetPagination()
-      
-      const params = {}
-      
-      if (this.filters.category && this.filters.category !== 'all') {
-        return await this.fetchProductsByCategory(this.filters.category)
+      console.log('Store: Searching products with filters:', this.filters)
+      // Since we do client-side filtering via the filteredProducts getter,
+      // we don't need to make new API calls - just ensure we have all products
+      if (this.products.length === 0) {
+        await this.fetchProducts({ fresh: true })
       }
-      
-      if (this.filters.priceRange.min > 0 || this.filters.priceRange.max < 1000) {
-        const response = await productsAPI.getProductsByPriceRange(this.filters.priceRange)
-        const productsData = response.products || response || []
-        this.products = productsData
-        return
-      }
-
-      await this.fetchProducts({ fresh: true })
     }
   }
 })

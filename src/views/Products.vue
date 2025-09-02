@@ -155,20 +155,15 @@ export default {
       await this.productsStore.loadMoreProducts()
     },
     
-    async onCategoryChange() {
+    onCategoryChange() {
       console.log('Category changed to:', this.selectedCategory)
       
-      // Update store filters
+      // Update store filters for client-side filtering
       this.productsStore.updateFilters({ 
         category: this.selectedCategory 
       })
       
-      // If 'all' is selected, fetch all products, otherwise filter by category
-      if (this.selectedCategory === 'all') {
-        await this.productsStore.refreshProducts()
-      } else {
-        await this.productsStore.fetchProductsByCategory(this.selectedCategory)
-      }
+      // No need to fetch again - filtering is done client-side
     },
     
     onPriceRangeChange() {
