@@ -94,16 +94,6 @@
       <p v-if="!productsStore.hasProducts">The merchant's shelves appear to be empty. Try again later!</p>
     </div>
 
-    <!-- Load More Button -->
-    <div v-if="productsStore.pagination.hasMore && displayProducts.length > 0" class="load-more">
-      <button 
-        @click="loadMoreProducts" 
-        class="load-more-btn"
-        :disabled="productsStore.isLoading"
-      >
-        {{ productsStore.isLoading ? 'Loading...' : 'Load More Treasures' }}
-      </button>
-    </div>
   </div>
 </template>
 
@@ -150,10 +140,6 @@ export default {
       await this.productsStore.refreshProducts()
     },
     
-    async loadMoreProducts() {
-      console.log('Loading more products...')
-      await this.productsStore.loadMoreProducts()
-    },
     
     onCategoryChange() {
       console.log('Category changed to:', this.selectedCategory)
@@ -735,38 +721,6 @@ export default {
   cursor: not-allowed;
 }
 
-/* Load More Button */
-.load-more {
-  text-align: center;
-  margin-top: 3rem;
-}
-
-.load-more-btn {
-  padding: 1.25rem 2.5rem;
-  background: linear-gradient(135deg, var(--color-burgundy) 0%, var(--color-dark-wood) 100%);
-  color: var(--color-gold);
-  border: 2px solid var(--color-gold-dark);
-  border-radius: 12px;
-  font-family: 'Cinzel', serif;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-size: 1.1rem;
-}
-
-.load-more-btn:hover:not(:disabled) {
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 
-    0 8px 16px rgba(0,0,0,0.4),
-    0 0 30px rgba(255,215,0,0.2);
-}
-
-.load-more-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 
 @media (max-width: 768px) {
   .filters {

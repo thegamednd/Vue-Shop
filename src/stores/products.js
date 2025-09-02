@@ -7,11 +7,10 @@ export const useProductsStore = defineStore('products', {
     products: [],
     currentProduct: null,
     
-    // Filters (server-side: status=active, client-side: category & price)
+    // Filters (client-side only)
     filters: {
       category: '',
-      priceRange: { min: 0, max: 1000 },
-      status: 'active' // Server-side filter - always active
+      priceRange: { min: 0, max: 1000 }
     },
     
     // Loading states
@@ -73,44 +72,27 @@ export const useProductsStore = defineStore('products', {
   },
 
   actions: {
-    // Fetch all active products - server filters by status=active
+    // Fetch all products - simple API call with no parameters
     async fetchProducts(params = {}) {
       this.isLoading = true
       this.error = null
 
       try {
-        console.log('Store: Fetching active products from /shop with status=active...')
+        console.log('Store: Fetching all products from /shop (no parameters)...')
         
-        // Pass pagination parameters - status=active is handled in the API service
-        const apiParams = {}
-        if (!params.fresh && this.pagination.lastKey) {
-          apiParams.lastKey = this.pagination.lastKey
-        }
-        if (this.pagination.limit) {
-          apiParams.limit = this.pagination.limit
-        }
-        
-        const response = await productsAPI.getAllProducts(apiParams)
+        const response = await productsAPI.getAllProducts()
 
         // Handle response structure - API returns { products: [...], count: number }
         const productsData = response.products || response || []
         
-        // If this is a fresh fetch, replace products; if pagination, append
-        if (params.fresh || !this.pagination.lastKey) {
-          this.products = productsData
-        } else {
-          this.products = [...this.products, ...productsData]
-        }
+        // Always replace products since we're not using pagination
+        this.products = productsData
 
-        // Update pagination
-        if (response.lastKey) {
-          this.pagination.lastKey = response.lastKey
-          this.pagination.hasMore = true
-        } else {
-          this.pagination.hasMore = false
-        }
+        // Reset pagination since we get all products at once
+        this.pagination.hasMore = false
+        this.pagination.lastKey = null
 
-        console.log(`Store: Loaded ${productsData.length} active products. Total: ${this.products.length}`)
+        console.log(`Store: Loaded ${productsData.length} products`)
         
       } catch (error) {
         console.error('Store: Error fetching products:', error)
@@ -156,12 +138,11 @@ export const useProductsStore = defineStore('products', {
       console.log('Store: Updated filters:', this.filters)
     },
 
-    // Clear filters (keep status=active for server-side filtering)
+    // Clear filters
     clearFilters() {
       this.filters = {
         category: '',
-        priceRange: { min: 0, max: 1000 },
-        status: 'active' // Always keep active status
+        priceRange: { min: 0, max: 1000 }
       }
       console.log('Store: Cleared filters')
     },
@@ -175,18 +156,9 @@ export const useProductsStore = defineStore('products', {
       }
     },
 
-    // Load more products (pagination)
-    async loadMoreProducts() {
-      if (!this.pagination.hasMore || this.isLoading) {
-        return
-      }
-
-      await this.fetchProducts()
-    },
 
     // Refresh products (clear and reload)
     async refreshProducts() {
-      this.resetPagination()
       await this.fetchProducts({ fresh: true })
     },
 
@@ -198,11 +170,10 @@ export const useProductsStore = defineStore('products', {
       this.resetPagination()
     },
 
-    // Search products with current filters (server-side status, client-side category/price)
+    // Search products with current filters (all client-side filtering)
     async searchProducts() {
       console.log('Store: Searching products with filters:', this.filters)
-      // Server-side filtering by status=active is automatic
-      // Client-side filtering via filteredProducts getter for category/price
+      // All filtering via filteredProducts getter - client-side only
       if (this.products.length === 0) {
         await this.fetchProducts({ fresh: true })
       }
