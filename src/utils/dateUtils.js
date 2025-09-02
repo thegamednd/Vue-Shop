@@ -5,7 +5,7 @@
 
 /**
  * Convert numeric timestamp to formatted date string
- * @param {number} timestamp - Unix timestamp in milliseconds
+ * @param {number|string} timestamp - Unix timestamp in seconds or milliseconds (auto-detected)
  * @param {Object} options - Formatting options
  * @returns {string} Formatted date string
  */
@@ -14,7 +14,13 @@ export function formatTimestamp(timestamp, options = {}) {
     return 'Unknown Date'
   }
 
-  const date = new Date(timestamp)
+  // Convert string to number and assume Unix timestamp (seconds)
+  const numTimestamp = typeof timestamp === 'string' ? parseInt(timestamp) : timestamp
+  
+  // Convert Unix timestamp (seconds) to milliseconds for JavaScript Date
+  const timestampMs = numTimestamp * 1000
+  
+  const date = new Date(timestampMs)
   
   // Default options
   const defaultOptions = {
@@ -45,7 +51,7 @@ export function formatTimestamp(timestamp, options = {}) {
 
 /**
  * Format timestamp as relative time (e.g., "2 days ago", "Just now")
- * @param {number} timestamp - Unix timestamp in milliseconds
+ * @param {number|string} timestamp - Unix timestamp in seconds or milliseconds (auto-detected)
  * @returns {string} Relative time string
  */
 export function formatRelativeTime(timestamp) {
@@ -53,8 +59,12 @@ export function formatRelativeTime(timestamp) {
     return 'Unknown'
   }
 
+  // Convert string to number and assume Unix timestamp (seconds)
+  const numTimestamp = typeof timestamp === 'string' ? parseInt(timestamp) : timestamp
+  const timestampMs = numTimestamp * 1000
+
   const now = Date.now()
-  const diff = now - timestamp
+  const diff = now - timestampMs
   const seconds = Math.floor(diff / 1000)
   const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
@@ -74,7 +84,7 @@ export function formatRelativeTime(timestamp) {
 
 /**
  * Format timestamp for fantasy/gaming theme
- * @param {number} timestamp - Unix timestamp in milliseconds
+ * @param {number|string} timestamp - Unix timestamp in seconds or milliseconds (auto-detected)
  * @returns {string} Fantasy-themed date string
  */
 export function formatFantasyDate(timestamp) {
@@ -82,7 +92,11 @@ export function formatFantasyDate(timestamp) {
     return 'Time Forgotten'
   }
 
-  const date = new Date(timestamp)
+  // Convert string to number and assume Unix timestamp (seconds)
+  const numTimestamp = typeof timestamp === 'string' ? parseInt(timestamp) : timestamp
+  const timestampMs = numTimestamp * 1000
+
+  const date = new Date(timestampMs)
   const months = [
     'First Moon', 'Second Moon', 'Third Moon', 'Fourth Moon',
     'Fifth Moon', 'Sixth Moon', 'Seventh Moon', 'Eighth Moon', 
@@ -104,15 +118,19 @@ export function formatFantasyDate(timestamp) {
 
 /**
  * Check if a timestamp is recent (within last 24 hours)
- * @param {number} timestamp - Unix timestamp in milliseconds
+ * @param {number|string} timestamp - Unix timestamp in seconds or milliseconds (auto-detected)
  * @returns {boolean} True if recent
  */
 export function isRecent(timestamp) {
   if (!timestamp || isNaN(timestamp)) return false
   
+  // Convert string to number and assume Unix timestamp (seconds)
+  const numTimestamp = typeof timestamp === 'string' ? parseInt(timestamp) : timestamp
+  const timestampMs = numTimestamp * 1000
+  
   const now = Date.now()
   const dayInMs = 24 * 60 * 60 * 1000
-  return (now - timestamp) < dayInMs
+  return (now - timestampMs) < dayInMs
 }
 
 /**
@@ -133,15 +151,31 @@ export function sortByTimestamp(products, field = 'CreatedAt', descending = true
 
 /**
  * Debug helper to log timestamp information
- * @param {number} timestamp - Unix timestamp to debug
+ * @param {number|string} timestamp - Unix timestamp to debug (seconds or milliseconds)
  * @param {string} label - Label for console output
  */
 export function debugTimestamp(timestamp, label = 'Timestamp') {
-  console.log(`${label}:`, {
-    numeric: timestamp,
-    date: new Date(timestamp).toISOString(),
-    formatted: formatTimestamp(timestamp),
-    relative: formatRelativeTime(timestamp),
-    fantasy: formatFantasyDate(timestamp)
-  })
+  if (!timestamp || isNaN(timestamp)) {
+    console.log(`${label}:`, { error: 'Invalid timestamp', value: timestamp })
+    return
+  }
+
+  // Convert string to number and assume Unix timestamp (seconds)
+  const numTimestamp = typeof timestamp === 'string' ? parseInt(timestamp) : timestamp
+  const timestampMs = numTimestamp * 1000
+  
+  try {
+    console.log(`${label}:`, {
+      original: timestamp,
+      detected: 'Unix seconds (converted to ms)',
+      numeric: numTimestamp,
+      milliseconds: timestampMs,
+      date: new Date(timestampMs).toISOString(),
+      formatted: formatTimestamp(timestamp),
+      relative: formatRelativeTime(timestamp),
+      fantasy: formatFantasyDate(timestamp)
+    })
+  } catch (error) {
+    console.error(`${label} error:`, error, 'Value:', timestamp)
+  }
 }
