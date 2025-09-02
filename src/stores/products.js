@@ -10,7 +10,7 @@ export const useProductsStore = defineStore('products', {
     // Filters (client-side only)
     filters: {
       category: '',
-      priceRange: { min: 0, max: 1000 }
+      priceRange: { min: 0, max: 10000 }
     },
     
     // Loading states
@@ -142,7 +142,7 @@ export const useProductsStore = defineStore('products', {
     clearFilters() {
       this.filters = {
         category: '',
-        priceRange: { min: 0, max: 1000 }
+        priceRange: { min: 0, max: 10000 }
       }
       console.log('Store: Cleared filters')
     },

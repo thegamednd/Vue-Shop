@@ -183,7 +183,7 @@ export default {
           priceRange = { min: 250.01, max: 10000 }
           break
         default:
-          priceRange = { min: 0, max: 1000 }
+          priceRange = { min: 0, max: 10000 }
       }
       
       // Update store filters
