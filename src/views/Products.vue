@@ -8,179 +8,280 @@
     <div class="filters">
       <div class="filter-group">
         <label>Category:</label>
-        <select v-model="selectedCategory" @change="filterProducts" class="filter-select">
+        <select v-model="selectedCategory" @change="onCategoryChange" class="filter-select">
           <option value="all">All Categories</option>
-          <option value="content">Quest Scrolls</option>
-          <option value="characters">Heroes & Companions</option>
-          <option value="items">Weapons & Artifacts</option>
-          <option value="subscriptions">Guild Memberships</option>
+          <option v-for="category in availableCategories" 
+                  :key="category" 
+                  :value="category"
+                  v-show="category !== 'all'">
+            {{ getCategoryName(category) }}
+          </option>
         </select>
       </div>
       
       <div class="filter-group">
         <label>Price Range:</label>
-        <select v-model="selectedPriceRange" @change="filterProducts" class="filter-select">
+        <select v-model="selectedPriceRange" @change="onPriceRangeChange" class="filter-select">
           <option value="all">All Prices</option>
           <option value="free">Free</option>
-          <option value="under10">Under 100 Gold</option>
-          <option value="10to25">100 - 250 Gold</option>
-          <option value="over25">Over 250 Gold</option>
+          <option value="under100">Under 100 Gold</option>
+          <option value="100to250">100 - 250 Gold</option>
+          <option value="over250">Over 250 Gold</option>
         </select>
+      </div>
+
+      <div class="filter-group">
+        <button 
+          @click="refreshProducts" 
+          class="refresh-btn"
+          :disabled="productsStore.isLoading"
+        >
+          🔄 Refresh
+        </button>
       </div>
     </div>
 
-    <div class="products-grid">
+    <!-- Loading State -->
+    <div v-if="productsStore.isLoading" class="loading">
+      <div class="loading-spinner">⚡</div>
+      <p>Loading magical wares...</p>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="productsStore.error" class="error-state">
+      <div class="error-icon">⚠️</div>
+      <h3>Trouble accessing the merchant's inventory!</h3>
+      <p>{{ productsStore.error }}</p>
+      <button @click="refreshProducts" class="retry-btn">Try Again</button>
+    </div>
+
+    <!-- Products Grid -->
+    <div v-else class="products-grid">
       <div 
-        v-for="product in filteredProducts" 
-        :key="product.id" 
+        v-for="product in displayProducts" 
+        :key="product.ID || product.id" 
         class="product-card"
-        @click="goToProduct(product.id)"
+        :data-rarity="getProductRarity(product)"
+        @click="goToProduct(product.ID || product.id)"
       >
-        <div class="rarity-badge" :data-rarity="product.rarity">{{ product.rarity }}</div>
-        <div class="product-image" :data-rarity="product.rarity">{{ product.emoji }}</div>
-        <h3 class="product-title">{{ product.name }}</h3>
-        <p class="product-category">{{ getCategoryName(product.category) }}</p>
+        <div class="rarity-badge" :data-rarity="getProductRarity(product)">
+          {{ getProductRarity(product) }}
+        </div>
+        <div class="product-image" :data-rarity="getProductRarity(product)">
+          {{ getProductEmoji(product) }}
+        </div>
+        <h3 class="product-title">{{ product.Name || product.name }}</h3>
+        <p class="product-category">{{ getCategoryName(product.Category || product.category) }}</p>
         <p class="product-price">
-          <span v-if="product.goldPrice === 0" class="free-badge">FREE</span>
+          <span v-if="(product.Price || product.price || 0) === 0" class="free-badge">FREE</span>
           <template v-else>
             <span class="gold-icon">🪙</span>
-            <span class="gold-amount">{{ product.goldPrice }}</span>
+            <span class="gold-amount">{{ formatPrice(product.Price || product.price) }}</span>
             <span class="gold-label">Gold</span>
           </template>
         </p>
-        <p class="product-description">{{ product.description }}</p>
-        <button class="add-to-inventory-btn" :data-rarity="product.rarity" @click.stop="addToCart(product)">
+        <p class="product-description">{{ product.Description || product.description || 'A mysterious item from the merchant\'s collection' }}</p>
+        <button class="add-to-inventory-btn" :data-rarity="getProductRarity(product)" @click.stop="addToCart(product)">
           <span class="button-icon">🎒</span>
           Add to Inventory
         </button>
       </div>
     </div>
 
-    <div v-if="filteredProducts.length === 0" class="no-products">
+    <!-- No Products State -->
+    <div v-if="!productsStore.isLoading && !productsStore.error && displayProducts.length === 0" class="no-products">
       <p>No products found matching your criteria.</p>
+      <p v-if="!productsStore.hasProducts">The merchant's shelves appear to be empty. Try again later!</p>
+    </div>
+
+    <!-- Load More Button -->
+    <div v-if="productsStore.pagination.hasMore && displayProducts.length > 0" class="load-more">
+      <button 
+        @click="loadMoreProducts" 
+        class="load-more-btn"
+        :disabled="productsStore.isLoading"
+      >
+        {{ productsStore.isLoading ? 'Loading...' : 'Load More Treasures' }}
+      </button>
     </div>
   </div>
 </template>
 
 <script>
+import { useProductsStore } from '../stores/products.js'
+
 export default {
   name: 'Products',
   data() {
     return {
       selectedCategory: 'all',
-      selectedPriceRange: 'all',
-      products: [
-        {
-          id: 1,
-          name: 'Apprentice\'s Scroll Bundle',
-          category: 'content',
-          price: 9.99,
-          goldPrice: 99,
-          emoji: '🎲',
-          rarity: 'common',
-          description: 'Essential knowledge for beginning adventurers'
-        },
-        {
-          id: 2,
-          name: 'Champion\'s Retinue',
-          category: 'characters',
-          price: 19.99,
-          goldPrice: 199,
-          emoji: '⚔️',
-          rarity: 'rare',
-          description: 'Elite warriors and mystical companions'
-        },
-        {
-          id: 3,
-          name: 'Arcane Arsenal',
-          category: 'items',
-          price: 14.99,
-          goldPrice: 149,
-          emoji: '🗡️',
-          rarity: 'rare',
-          description: 'Enchanted weapons and protective talismans'
-        },
-        {
-          id: 4,
-          name: 'Guild Master\'s Seal',
-          category: 'subscriptions',
-          price: 9.99,
-          goldPrice: 99,
-          emoji: '⚜️',
-          rarity: 'epic',
-          description: 'Monthly access to the inner sanctum'
-        },
-        {
-          id: 5,
-          name: 'Tome of the Ancient Wyrm',
-          category: 'content',
-          price: 24.99,
-          goldPrice: 249,
-          emoji: '🐉',
-          rarity: 'legendary',
-          description: 'Chronicle of the great dragon wars'
-        },
-        {
-          id: 6,
-          name: 'Novice\'s Grimoire',
-          category: 'content',
-          price: 0.00,
-          goldPrice: 0,
-          emoji: '📚',
-          rarity: 'common',
-          description: 'Basic spells and cantrips for new mages'
-        }
-      ],
-      filteredProducts: []
+      selectedPriceRange: 'all'
     }
   },
-  mounted() {
-    this.filteredProducts = this.products
+  computed: {
+    productsStore() {
+      return useProductsStore()
+    },
+    availableCategories() {
+      return this.productsStore.categories
+    },
+    displayProducts() {
+      return this.productsStore.filteredProducts
+    }
+  },
+  async mounted() {
+    console.log('Products page mounted - fetching products from API')
+    
+    // Fetch products on page load
+    await this.loadProducts()
   },
   methods: {
-    filterProducts() {
-      let filtered = [...this.products]
-      
-      // Filter by category
-      if (this.selectedCategory !== 'all') {
-        filtered = filtered.filter(product => product.category === this.selectedCategory)
+    async loadProducts() {
+      try {
+        await this.productsStore.fetchProducts({ fresh: true })
+        console.log('Products loaded successfully:', this.productsStore.products.length, 'items')
+      } catch (error) {
+        console.error('Failed to load products:', error)
       }
-      
-      // Filter by price range
-      if (this.selectedPriceRange !== 'all') {
-        switch (this.selectedPriceRange) {
-          case 'free':
-            filtered = filtered.filter(product => product.price === 0)
-            break
-          case 'under10':
-            filtered = filtered.filter(product => product.price > 0 && product.price < 10)
-            break
-          case '10to25':
-            filtered = filtered.filter(product => product.price >= 10 && product.price <= 25)
-            break
-          case 'over25':
-            filtered = filtered.filter(product => product.price > 25)
-            break
-        }
-      }
-      
-      this.filteredProducts = filtered
     },
+    
+    async refreshProducts() {
+      console.log('Refreshing products...')
+      await this.productsStore.refreshProducts()
+    },
+    
+    async loadMoreProducts() {
+      console.log('Loading more products...')
+      await this.productsStore.loadMoreProducts()
+    },
+    
+    async onCategoryChange() {
+      console.log('Category changed to:', this.selectedCategory)
+      
+      // Update store filters
+      this.productsStore.updateFilters({ 
+        category: this.selectedCategory 
+      })
+      
+      // If 'all' is selected, fetch all products, otherwise filter by category
+      if (this.selectedCategory === 'all') {
+        await this.productsStore.refreshProducts()
+      } else {
+        await this.productsStore.fetchProductsByCategory(this.selectedCategory)
+      }
+    },
+    
+    onPriceRangeChange() {
+      console.log('Price range changed to:', this.selectedPriceRange)
+      
+      let priceRange = { min: 0, max: 1000 }
+      
+      switch (this.selectedPriceRange) {
+        case 'free':
+          priceRange = { min: 0, max: 0 }
+          break
+        case 'under100':
+          priceRange = { min: 0.01, max: 99.99 }
+          break
+        case '100to250':
+          priceRange = { min: 100, max: 250 }
+          break
+        case 'over250':
+          priceRange = { min: 250.01, max: 10000 }
+          break
+        default:
+          priceRange = { min: 0, max: 1000 }
+      }
+      
+      // Update store filters
+      this.productsStore.updateFilters({ 
+        priceRange: priceRange 
+      })
+    },
+    
     goToProduct(productId) {
+      console.log('Navigating to product:', productId)
       this.$router.push(`/product/${productId}`)
     },
+    
     addToCart(product) {
+      console.log('Adding to cart:', product)
       // TODO: Implement inventory functionality
-      alert(`${product.name} has been added to your inventory!`)
+      const productName = product.Name || product.name
+      alert(`${productName} has been added to your inventory!`)
     },
+    
     getCategoryName(category) {
+      if (!category) return 'Unknown Category'
+      
       const categoryMap = {
         content: 'Quest Scrolls',
-        characters: 'Heroes & Companions',
+        characters: 'Heroes & Companions', 
         items: 'Weapons & Artifacts',
-        subscriptions: 'Guild Memberships'
+        subscriptions: 'Guild Memberships',
+        // API might return different category names
+        'quest scrolls': 'Quest Scrolls',
+        'heroes & companions': 'Heroes & Companions',
+        'weapons & artifacts': 'Weapons & Artifacts',
+        'guild memberships': 'Guild Memberships'
       }
-      return categoryMap[category] || category
+      
+      return categoryMap[category.toLowerCase()] || 
+             category.charAt(0).toUpperCase() + category.slice(1)
+    },
+    
+    getProductRarity(product) {
+      // If product has explicit rarity, use it
+      if (product.rarity) return product.rarity
+      
+      // Otherwise, determine rarity based on price
+      const price = parseFloat(product.Price || product.price || 0)
+      
+      if (price === 0) return 'common'
+      if (price < 50) return 'common'
+      if (price < 150) return 'rare'
+      if (price < 300) return 'epic'
+      return 'legendary'
+    },
+    
+    getProductEmoji(product) {
+      // If product has explicit emoji, use it
+      if (product.emoji) return product.emoji
+      
+      // Otherwise, determine emoji based on category or generate default
+      const category = (product.Category || product.category || '').toLowerCase()
+      
+      const categoryEmojis = {
+        content: '📜',
+        characters: '⚔️',
+        items: '🗡️',
+        subscriptions: '⚜️',
+        'quest scrolls': '📜',
+        'heroes & companions': '⚔️', 
+        'weapons & artifacts': '🗡️',
+        'guild memberships': '⚜️'
+      }
+      
+      return categoryEmojis[category] || '🎲'
+    },
+    
+    formatPrice(price) {
+      if (!price && price !== 0) return '0'
+      
+      const numPrice = parseFloat(price)
+      
+      // If it's a reasonable "gold" price (under 1000), show as-is
+      if (numPrice < 1000) {
+        return Math.round(numPrice).toString()
+      }
+      
+      // If it's a real currency price (likely under $100), convert to "gold"
+      if (numPrice < 100) {
+        return Math.round(numPrice * 10).toString()
+      }
+      
+      // Otherwise show as-is
+      return Math.round(numPrice).toString()
     }
   }
 }
@@ -539,6 +640,139 @@ export default {
   box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
+/* Loading State */
+.loading {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: linear-gradient(135deg, var(--color-parchment) 0%, var(--color-parchment-dark) 100%);
+  border-radius: 12px;
+  border: 2px solid var(--color-medium-wood);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.loading-spinner {
+  font-size: 3rem;
+  animation: spin 2s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.loading p {
+  font-family: 'Crimson Text', serif;
+  font-size: 1.2rem;
+  color: var(--color-text-dark);
+  font-style: italic;
+}
+
+/* Error State */
+.error-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-radius: 12px;
+  border: 2px solid #e57373;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.error-state h3 {
+  font-family: 'Cinzel', serif;
+  color: #c62828;
+  margin-bottom: 1rem;
+}
+
+.error-state p {
+  font-family: 'Crimson Text', serif;
+  color: #d32f2f;
+  margin-bottom: 2rem;
+}
+
+.retry-btn {
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #e57373 0%, #ef5350 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.retry-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+
+/* Refresh Button */
+.refresh-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, var(--color-gold-dark) 0%, var(--color-gold) 100%);
+  color: var(--color-dark-wood);
+  border: 2px solid var(--color-gold-dark);
+  border-radius: 8px;
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Load More Button */
+.load-more {
+  text-align: center;
+  margin-top: 3rem;
+}
+
+.load-more-btn {
+  padding: 1.25rem 2.5rem;
+  background: linear-gradient(135deg, var(--color-burgundy) 0%, var(--color-dark-wood) 100%);
+  color: var(--color-gold);
+  border: 2px solid var(--color-gold-dark);
+  border-radius: 12px;
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 1.1rem;
+}
+
+.load-more-btn:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 
+    0 8px 16px rgba(0,0,0,0.4),
+    0 0 30px rgba(255,215,0,0.2);
+}
+
+.load-more-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .filters {
     flex-direction: column;
@@ -547,6 +781,15 @@ export default {
   
   .products-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .filter-group {
+    align-items: stretch;
+  }
+  
+  .refresh-btn {
+    padding: 1rem;
+    font-size: 0.8rem;
   }
 }
 </style>
