@@ -47,6 +47,8 @@
 </template>
 
 <script>
+import { useProductsStore } from '../stores/products.js'
+
 export default {
   name: 'ProductDetail',
   props: {
@@ -58,7 +60,10 @@ export default {
   data() {
     return {
       product: null,
-      products: [
+      isLoading: false,
+      error: null,
+      // Fallback mock products for development
+      mockProducts: [
         {
           id: 1,
           name: 'Starter Content Pack',
@@ -107,8 +112,13 @@ export default {
       ]
     }
   },
-  mounted() {
-    this.loadProduct()
+  computed: {
+    productsStore() {
+      return useProductsStore()
+    }
+  },
+  async mounted() {
+    await this.loadProduct()
   },
   watch: {
     id() {
@@ -116,9 +126,69 @@ export default {
     }
   },
   methods: {
-    loadProduct() {
-      const productId = parseInt(this.id)
-      this.product = this.products.find(p => p.id === productId)
+    async loadProduct() {
+      this.isLoading = true
+      this.error = null
+      
+      try {
+        // First check if product is already in store
+        const storeProduct = this.productsStore.getProductById(this.id)
+        
+        if (storeProduct) {
+          // Map the product data to the expected format
+          this.product = {
+            id: storeProduct.ID,
+            name: storeProduct.Name,
+            category: storeProduct.Category,
+            price: (storeProduct.Price / 100).toFixed(2), // Convert cents to dollars
+            emoji: this.getProductEmoji(storeProduct),
+            description: storeProduct.Description || storeProduct.Info || 'A mysterious item from the merchant\'s collection',
+            longDescription: storeProduct.LongDescription || '',
+            features: storeProduct.Features || storeProduct.Tags || []
+          }
+        } else {
+          // Try to fetch individual product if not in store
+          try {
+            const fetchedProduct = await this.productsStore.fetchProductById(this.id)
+            if (fetchedProduct) {
+              this.product = {
+                id: fetchedProduct.ID,
+                name: fetchedProduct.Name,
+                category: fetchedProduct.Category,
+                price: (fetchedProduct.Price / 100).toFixed(2),
+                emoji: this.getProductEmoji(fetchedProduct),
+                description: fetchedProduct.Description || fetchedProduct.Info || 'A mysterious item from the merchant\'s collection',
+                longDescription: fetchedProduct.LongDescription || '',
+                features: fetchedProduct.Features || fetchedProduct.Tags || []
+              }
+            }
+          } catch (fetchError) {
+            // Fallback to mock data if API fails
+            console.warn('Failed to fetch product, using mock data:', fetchError)
+            const productId = parseInt(this.id)
+            this.product = this.mockProducts.find(p => p.id === productId)
+          }
+        }
+      } catch (error) {
+        console.error('Error loading product:', error)
+        this.error = error.message
+        // Fallback to mock data
+        const productId = parseInt(this.id)
+        this.product = this.mockProducts.find(p => p.id === productId)
+      } finally {
+        this.isLoading = false
+      }
+    },
+    
+    getProductEmoji(product) {
+      const category = (product.Category || '').toLowerCase()
+      const categoryEmojis = {
+        content: '📜',
+        characters: '⚔️',
+        items: '🗡️',
+        subscriptions: '⚜️'
+      }
+      return categoryEmojis[category] || '🎲'
     },
     goBack() {
       this.$router.push('/products')

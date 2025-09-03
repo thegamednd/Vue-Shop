@@ -24,9 +24,9 @@
         <select v-model="selectedPriceRange" @change="onPriceRangeChange" class="filter-select">
           <option value="all">All Prices</option>
           <option value="free">Free</option>
-          <option value="under100">Under 100 Gold</option>
-          <option value="100to250">100 - 250 Gold</option>
-          <option value="over250">Over 250 Gold</option>
+          <option value="under100">Under $100</option>
+          <option value="100to250">$100 - $250</option>
+          <option value="over250">Over $250</option>
         </select>
       </div>
 
@@ -65,7 +65,7 @@
         @click="goToProduct(product.ID || product.id)"
       >
         <div class="rarity-badge" :data-rarity="getProductRarity(product)">
-          {{ getProductRarity(product) }}
+          {{ (product.Category || product.category || 'Unknown').replace(/-/g, ' ') }}
         </div>
         <div class="product-image" :data-rarity="getProductRarity(product)">
           {{ getProductEmoji(product) }}
@@ -74,13 +74,9 @@
         <p class="product-category">{{ getCategoryName(product.Category || product.category) }}</p>
         <p class="product-price">
           <span v-if="(product.Price || product.price || 0) === 0" class="free-badge">FREE</span>
-          <template v-else>
-            <span class="gold-icon">🪙</span>
-            <span class="gold-amount">{{ formatPrice(product.Price || product.price) }}</span>
-            <span class="gold-label">Gold</span>
-          </template>
+          <span v-else class="price-amount">{{ formatPrice(product.Price || product.price) }}</span>
         </p>
-        <p class="product-description">{{ product.Description || product.description || 'A mysterious item from the merchant\'s collection' }}</p>
+        <p class="product-description">{{ product.Description || product.Info || product.description || 'A mysterious item from the merchant\'s collection' }}</p>
         <button class="add-to-inventory-btn" :data-rarity="getProductRarity(product)" @click.stop="addToCart(product)">
           <span class="button-icon">🎒</span>
           Add to Inventory
@@ -130,11 +126,11 @@ export default {
     async loadProducts() {
       try {
         await this.productsStore.fetchProducts({ fresh: true })
-        console.log('Products loaded successfully:', this.productsStore.products.length, 'items')
+        console.log('Products loaded successfully:', this.productsStore.productsCount, 'items')
         
         // Debug timestamp information for first product
-        if (this.productsStore.products.length > 0) {
-          const firstProduct = this.productsStore.products[0]
+        if (this.productsStore.hasProducts) {
+          const firstProduct = this.productsStore.productsArray[0]
           if (firstProduct.CreatedAt) {
             debugTimestamp(firstProduct.CreatedAt, `First Product (${firstProduct.Name}) CreatedAt`)
           }
@@ -167,23 +163,24 @@ export default {
     onPriceRangeChange() {
       console.log('Price range changed to:', this.selectedPriceRange)
       
-      let priceRange = { min: 0, max: 1000 }
+      // Price ranges in cents
+      let priceRange = { min: 0, max: 1000000 }
       
       switch (this.selectedPriceRange) {
         case 'free':
           priceRange = { min: 0, max: 0 }
           break
         case 'under100':
-          priceRange = { min: 0.01, max: 99.99 }
+          priceRange = { min: 1, max: 9999 }  // 1 cent to 99.99 dollars (9999 cents)
           break
         case '100to250':
-          priceRange = { min: 100, max: 250 }
+          priceRange = { min: 10000, max: 25000 }  // 100 to 250 dollars in cents
           break
         case 'over250':
-          priceRange = { min: 250.01, max: 10000 }
+          priceRange = { min: 25001, max: 1000000 }  // 250.01+ dollars in cents
           break
         default:
-          priceRange = { min: 0, max: 10000 }
+          priceRange = { min: 0, max: 1000000 }  // Up to 10,000 dollars in cents
       }
       
       // Update store filters
@@ -227,14 +224,14 @@ export default {
       // If product has explicit rarity, use it
       if (product.rarity) return product.rarity
       
-      // Otherwise, determine rarity based on price
+      // Otherwise, determine rarity based on price (in cents)
       const price = parseFloat(product.Price || product.price || 0)
       
       if (price === 0) return 'common'
-      if (price < 50) return 'common'
-      if (price < 150) return 'rare'
-      if (price < 300) return 'epic'
-      return 'legendary'
+      if (price < 5000) return 'common'      // Under $50
+      if (price < 15000) return 'rare'       // Under $150
+      if (price < 30000) return 'epic'       // Under $300
+      return 'legendary'                     // $300+
     },
     
     getProductEmoji(product) {
@@ -259,22 +256,14 @@ export default {
     },
     
     formatPrice(price) {
-      if (!price && price !== 0) return '0'
+      if (!price && price !== 0) return '$0.00'
       
+      // Price is in cents CAD, convert to dollars
       const numPrice = parseFloat(price)
+      const dollars = numPrice / 100
       
-      // If it's a reasonable "gold" price (under 1000), show as-is
-      if (numPrice < 1000) {
-        return Math.round(numPrice).toString()
-      }
-      
-      // If it's a real currency price (likely under $100), convert to "gold"
-      if (numPrice < 100) {
-        return Math.round(numPrice * 10).toString()
-      }
-      
-      // Otherwise show as-is
-      return Math.round(numPrice).toString()
+      // Format as currency
+      return `$${dollars.toFixed(2)}`
     },
     
     // Timestamp utility methods
@@ -540,22 +529,12 @@ export default {
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
-.gold-icon {
-  font-size: 1.3rem;
-  filter: drop-shadow(0 0 2px rgba(255,215,0,0.5));
-}
-
-.gold-amount {
+.price-amount {
   font-family: 'Cinzel', serif;
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   font-weight: 700;
-}
-
-.gold-label {
-  font-family: 'Cinzel', serif;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  color: var(--color-gold-dark);
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
 }
 
 .product-description {

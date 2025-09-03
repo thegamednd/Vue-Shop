@@ -3,14 +3,14 @@ import { productsAPI } from '../services/products.js'
 
 export const useProductsStore = defineStore('products', {
   state: () => ({
-    // Products data
-    products: [],
+    // Products data as object collection { id: product, ... }
+    products: {},
     currentProduct: null,
     
     // Filters (client-side only)
     filters: {
       category: '',
-      priceRange: { min: 0, max: 10000 }
+      priceRange: { min: 0, max: 1000000 }  // In cents (up to $10,000)
     },
     
     // Loading states
@@ -32,9 +32,12 @@ export const useProductsStore = defineStore('products', {
   }),
 
   getters: {
+    // Get all products as array from object collection
+    productsArray: (state) => Object.values(state.products),
+
     // Get filtered products based on current filters
     filteredProducts: (state) => {
-      let filtered = state.products
+      let filtered = Object.values(state.products)
 
       // Filter by category if selected
       if (state.filters.category && state.filters.category !== 'all') {
@@ -54,21 +57,25 @@ export const useProductsStore = defineStore('products', {
 
     // Get unique categories from products
     categories: (state) => {
-      const categories = [...new Set(state.products.map(product => product.Category).filter(Boolean))]
+      const productsArray = Object.values(state.products)
+      const categories = [...new Set(productsArray.map(product => product.Category).filter(Boolean))]
       return ['all', ...categories.sort()]
     },
 
     // Get products count
-    productsCount: (state) => state.products.length,
+    productsCount: (state) => Object.keys(state.products).length,
 
     // Get filtered products count
     filteredProductsCount: (state) => state.filteredProducts.length,
 
     // Check if has any products
-    hasProducts: (state) => state.products.length > 0,
+    hasProducts: (state) => Object.keys(state.products).length > 0,
 
     // Get loading state
-    isLoadingAny: (state) => state.isLoading || state.isLoadingProduct
+    isLoadingAny: (state) => state.isLoading || state.isLoadingProduct,
+
+    // Get product by ID
+    getProductById: (state) => (id) => state.products[id] || null
   },
 
   actions: {
@@ -85,14 +92,22 @@ export const useProductsStore = defineStore('products', {
         // Handle response structure - API returns { products: [...], count: number }
         const productsData = response.products || response || []
         
+        // Convert array to object collection with ID as key
+        const productsObject = {}
+        productsData.forEach(product => {
+          if (product.ID) {
+            productsObject[product.ID] = product
+          }
+        })
+        
         // Always replace products since we're not using pagination
-        this.products = productsData
+        this.products = productsObject
 
         // Reset pagination since we get all products at once
         this.pagination.hasMore = false
         this.pagination.lastKey = null
 
-        console.log(`Store: Loaded ${productsData.length} products`)
+        console.log(`Store: Loaded ${productsData.length} products into object collection`)
         
       } catch (error) {
         console.error('Store: Error fetching products:', error)
@@ -113,10 +128,9 @@ export const useProductsStore = defineStore('products', {
         
         this.currentProduct = product
         
-        // Also update in products array if it exists
-        const index = this.products.findIndex(p => p.ID === id)
-        if (index !== -1) {
-          this.products[index] = product
+        // Update in products object collection
+        if (product && product.ID) {
+          this.products[product.ID] = product
         }
 
         console.log('Store: Loaded product:', product)
@@ -142,7 +156,7 @@ export const useProductsStore = defineStore('products', {
     clearFilters() {
       this.filters = {
         category: '',
-        priceRange: { min: 0, max: 10000 }
+        priceRange: { min: 0, max: 1000000 }  // In cents (up to $10,000)
       }
       console.log('Store: Cleared filters')
     },
@@ -164,7 +178,7 @@ export const useProductsStore = defineStore('products', {
 
     // Clear all data
     clearData() {
-      this.products = []
+      this.products = {}
       this.currentProduct = null
       this.error = null
       this.resetPagination()
@@ -174,9 +188,31 @@ export const useProductsStore = defineStore('products', {
     async searchProducts() {
       console.log('Store: Searching products with filters:', this.filters)
       // All filtering via filteredProducts getter - client-side only
-      if (this.products.length === 0) {
+      if (!this.hasProducts) {
         await this.fetchProducts({ fresh: true })
       }
+    },
+
+    // Add or update a single product in the collection
+    setProduct(product) {
+      if (product && product.ID) {
+        this.products[product.ID] = product
+        console.log('Store: Set product:', product.ID, product.Name)
+      }
+    },
+
+    // Remove a product from the collection
+    removeProduct(id) {
+      if (this.products[id]) {
+        const productName = this.products[id].Name
+        delete this.products[id]
+        console.log('Store: Removed product:', id, productName)
+      }
+    },
+
+    // Check if product exists in collection
+    hasProduct(id) {
+      return !!this.products[id]
     }
   }
 })
