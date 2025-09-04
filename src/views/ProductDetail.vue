@@ -135,12 +135,14 @@ export default {
         const storeProduct = this.productsStore.getProductById(this.id)
         
         if (storeProduct) {
-          // Check if we have Description, if not fetch full product details from API
+          // Check if we have Description property, if not fetch full product details from API
           if (!storeProduct.Description) {
-            console.log('Product missing Description, fetching full details from API...')
+            console.log('Product missing Description, fetching full details from /shop/products/product/{id}...')
             try {
               const fullProduct = await this.productsStore.fetchProductById(this.id)
               if (fullProduct) {
+                // The store's fetchProductById already updates the product in the store
+                console.log('Received and stored full product details')
                 this.product = {
                   id: fullProduct.ID,
                   name: fullProduct.Name,
@@ -168,6 +170,7 @@ export default {
             }
           } else {
             // We have Description, use store data
+            console.log('Product has Description, using store data...')
             this.product = {
               id: storeProduct.ID,
               name: storeProduct.Name,
