@@ -77,10 +77,6 @@
           <span v-else class="price-amount">{{ formatPrice(product.Price || product.price) }}</span>
         </p>
         <p class="product-description">{{ product.Description || product.Info || product.description || 'A mysterious item from the merchant\'s collection' }}</p>
-        <button class="add-to-inventory-btn" :data-rarity="getProductRarity(product)" @click.stop="addToCart(product)">
-          <span class="button-icon">🎒</span>
-          Add to Inventory
-        </button>
       </div>
     </div>
 
@@ -194,12 +190,6 @@ export default {
       this.$router.push(`/product/${productId}`)
     },
     
-    addToCart(product) {
-      console.log('Adding to cart:', product)
-      // TODO: Implement inventory functionality
-      const productName = product.Name || product.name
-      alert(`${productName} has been added to your inventory!`)
-    },
     
     getCategoryName(category) {
       if (!category) return 'Unknown Category'

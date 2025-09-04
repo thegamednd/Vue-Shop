@@ -135,16 +135,49 @@ export default {
         const storeProduct = this.productsStore.getProductById(this.id)
         
         if (storeProduct) {
-          // Map the product data to the expected format
-          this.product = {
-            id: storeProduct.ID,
-            name: storeProduct.Name,
-            category: storeProduct.Category,
-            price: (storeProduct.Price / 100).toFixed(2), // Convert cents to dollars
-            emoji: this.getProductEmoji(storeProduct),
-            description: storeProduct.Description || storeProduct.Info || 'A mysterious item from the merchant\'s collection',
-            longDescription: storeProduct.LongDescription || '',
-            features: storeProduct.Features || storeProduct.Tags || []
+          // Check if we have Description, if not fetch full product details from API
+          if (!storeProduct.Description) {
+            console.log('Product missing Description, fetching full details from API...')
+            try {
+              const fullProduct = await this.productsStore.fetchProductById(this.id)
+              if (fullProduct) {
+                this.product = {
+                  id: fullProduct.ID,
+                  name: fullProduct.Name,
+                  category: fullProduct.Category,
+                  price: (fullProduct.Price / 100).toFixed(2),
+                  emoji: this.getProductEmoji(fullProduct),
+                  description: fullProduct.Description || fullProduct.Info || 'A mysterious item from the merchant\'s collection',
+                  longDescription: fullProduct.LongDescription || '',
+                  features: fullProduct.Features || fullProduct.Tags || []
+                }
+              }
+            } catch (error) {
+              console.warn('Failed to fetch full product details, using store data:', error)
+              // Fallback to store data
+              this.product = {
+                id: storeProduct.ID,
+                name: storeProduct.Name,
+                category: storeProduct.Category,
+                price: (storeProduct.Price / 100).toFixed(2),
+                emoji: this.getProductEmoji(storeProduct),
+                description: storeProduct.Info || 'A mysterious item from the merchant\'s collection',
+                longDescription: '',
+                features: storeProduct.Tags || []
+              }
+            }
+          } else {
+            // We have Description, use store data
+            this.product = {
+              id: storeProduct.ID,
+              name: storeProduct.Name,
+              category: storeProduct.Category,
+              price: (storeProduct.Price / 100).toFixed(2),
+              emoji: this.getProductEmoji(storeProduct),
+              description: storeProduct.Description || storeProduct.Info || 'A mysterious item from the merchant\'s collection',
+              longDescription: storeProduct.LongDescription || '',
+              features: storeProduct.Features || storeProduct.Tags || []
+            }
           }
         } else {
           // Try to fetch individual product if not in store
