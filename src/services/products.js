@@ -28,7 +28,7 @@ export const productsAPI = {
     try {
       console.log('Fetching product by ID:', id)
       
-      const response = await apiClient.get(`/shop/products/${id}`)
+      const response = await apiClient.get(`/shop/products/product/${id}`)
       
       console.log('Product API response:', response.data)
       return response.data
