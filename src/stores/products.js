@@ -81,11 +81,17 @@ export const useProductsStore = defineStore('products', {
   actions: {
     // Fetch all products - simple API call with no parameters
     async fetchProducts(params = {}) {
+      // Skip if we already have products and not forcing fresh
+      if (!params.fresh && this.hasProducts) {
+        console.log('Store: Products already loaded, skipping API call')
+        return
+      }
+
       this.isLoading = true
       this.error = null
 
       try {
-        console.log('Store: Fetching all products from /shop (no parameters)...')
+        console.log('Store: Fetching all products from /shop...')
         
         const response = await productsAPI.getAllProducts()
 

@@ -41,6 +41,12 @@ const routes = [
     meta: { requiresAuth: true } // Must be logged in to view account
   },
   {
+    path: '/account/active-realm',
+    name: 'ActiveRealm',
+    component: () => import('@/views/ActiveRealm.vue'),
+    meta: { requiresAuth: true } // Must be logged in to view active realm
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('@/views/Login.vue'),

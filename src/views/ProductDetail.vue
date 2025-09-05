@@ -16,8 +16,8 @@
         
         <div class="product-description">
           <h3>Description</h3>
-          <p>{{ product.description }}</p>
-          <p>{{ product.longDescription }}</p>
+          <div v-html="product.description"></div>
+          <div v-if="product.longDescription" v-html="product.longDescription"></div>
         </div>
         
         <div class="product-features" v-if="product.features">
@@ -137,7 +137,7 @@ export default {
         if (storeProduct) {
           // Check if we have Description property, if not fetch full product details from API
           if (!storeProduct.Description) {
-            console.log('Product missing Description, fetching full details from /shop/products/product/{id}...')
+            console.log('Product in store but missing Description, fetching full details from API...')
             try {
               const fullProduct = await this.productsStore.fetchProductById(this.id)
               if (fullProduct) {
@@ -170,7 +170,7 @@ export default {
             }
           } else {
             // We have Description, use store data
-            console.log('Product has Description, using store data...')
+            console.log('Product found in store with full details, skipping API call')
             this.product = {
               id: storeProduct.ID,
               name: storeProduct.Name,
@@ -183,7 +183,8 @@ export default {
             }
           }
         } else {
-          // Try to fetch individual product if not in store
+          // Product not in store, need to fetch it
+          console.log('Product not in store, fetching from API...')
           try {
             const fetchedProduct = await this.productsStore.fetchProductById(this.id)
             if (fetchedProduct) {
@@ -323,6 +324,54 @@ export default {
   color: #7f8c8d;
   line-height: 1.6;
   margin-bottom: 1rem;
+}
+
+.product-description div {
+  color: #7f8c8d;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+/* HTML content styling within description */
+.product-description div p {
+  margin-bottom: 0.8rem;
+}
+
+.product-description div h1,
+.product-description div h2,
+.product-description div h3,
+.product-description div h4 {
+  color: #2c3e50;
+  margin-top: 1.2rem;
+  margin-bottom: 0.6rem;
+}
+
+.product-description div ul,
+.product-description div ol {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.product-description div li {
+  margin-bottom: 0.3rem;
+}
+
+.product-description div strong {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.product-description div em {
+  font-style: italic;
+}
+
+.product-description div a {
+  color: #3498db;
+  text-decoration: underline;
+}
+
+.product-description div a:hover {
+  color: #2980b9;
 }
 
 .product-features ul {

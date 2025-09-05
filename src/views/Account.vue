@@ -43,6 +43,12 @@
             My Library
           </button>
           <button 
+            @click="activeSection = 'active-realm'"
+            :class="{ active: activeSection === 'active-realm' }"
+          >
+            Active Realm
+          </button>
+          <button 
             @click="activeSection = 'settings'"
             :class="{ active: activeSection === 'settings' }"
           >
@@ -103,6 +109,46 @@
           </div>
         </div>
 
+        <!-- Active Realm Section -->
+        <div v-if="activeSection === 'active-realm'" class="section">
+          <h2>Active Realm</h2>
+          <div class="realm-overview">
+            <div v-if="activeRealm" class="realm-card">
+              <div class="realm-header">
+                <div class="realm-icon">🏰</div>
+                <div class="realm-info">
+                  <h3>{{ activeRealm.name }}</h3>
+                  <p class="realm-description">{{ activeRealm.description }}</p>
+                </div>
+              </div>
+              
+              <div class="realm-details">
+                <div class="realm-date">
+                  <span class="label">Realm Date:</span>
+                  <span class="value">{{ formatRealmDate(activeRealm.date) }}</span>
+                </div>
+                <div class="active-players">
+                  <span class="label">Active Players:</span>
+                  <span class="value">{{ activeRealm.activePlayers }} players</span>
+                </div>
+              </div>
+              
+              <div class="realm-actions">
+                <router-link to="/account/active-realm" class="manage-realm-btn">
+                  Manage Realm & Players
+                </router-link>
+              </div>
+            </div>
+            
+            <div v-else class="no-realm">
+              <div class="no-realm-icon">🌟</div>
+              <h3>No Active Realm</h3>
+              <p>You don't have an active realm yet. Create or join a realm to start your adventure!</p>
+              <button @click="createRealm" class="create-realm-btn">Create New Realm</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Settings Section -->
         <div v-if="activeSection === 'settings'" class="section">
           <h2>Account Settings</h2>
@@ -151,6 +197,17 @@ export default {
     })
     
     const data = reactive({
+        activeRealm: {
+          name: "The Mystical Kingdoms",
+          description: "A realm of magic, adventure, and endless possibilities where heroes forge their destiny.",
+          date: {
+            day: 15,
+            month: "Frostfall", 
+            year: 1247,
+            season: "Winter"
+          },
+          activePlayers: 4
+        },
         settings: {
           emailNotifications: true,
           marketingEmails: false
@@ -210,6 +267,13 @@ export default {
           // TODO: Implement account deletion with API
           alert('Account deletion not implemented yet')
         }
+      },
+      formatRealmDate(date) {
+        return `${date.day} ${date.month} ${date.year} (${date.season})`
+      },
+      createRealm() {
+        // TODO: Implement realm creation flow
+        alert('Realm creation not implemented yet')
       }
     }
     
@@ -519,6 +583,146 @@ export default {
   font-weight: bold;
 }
 
+/* Active Realm Styles */
+.realm-overview {
+  max-width: 600px;
+}
+
+.realm-card {
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.realm-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.realm-icon {
+  font-size: 3rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.realm-info h3 {
+  color: #2c3e50;
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.realm-description {
+  color: #7f8c8d;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.realm-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.realm-date,
+.active-players {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.realm-details .label {
+  font-weight: bold;
+  color: #495057;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.realm-details .value {
+  color: #2c3e50;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.realm-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.manage-realm-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  text-decoration: none;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.manage-realm-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.no-realm {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: #f8f9fa;
+  border: 2px dashed #dee2e6;
+  border-radius: 12px;
+}
+
+.no-realm-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.no-realm h3 {
+  color: #6c757d;
+  margin-bottom: 1rem;
+}
+
+.no-realm p {
+  color: #6c757d;
+  margin-bottom: 2rem;
+  font-size: 1.1rem;
+}
+
+.create-realm-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.create-realm-btn:hover {
+  background: #218838;
+  transform: translateY(-1px);
+}
+
 @media (max-width: 768px) {
   .account-content {
     grid-template-columns: 1fr;
@@ -535,6 +739,21 @@ export default {
   
   .account-nav button {
     white-space: nowrap;
+  }
+  
+  .realm-details {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .realm-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+  
+  .realm-card {
+    padding: 1.5rem;
   }
 }
 </style>

@@ -76,7 +76,7 @@
           <span v-if="(product.Price || product.price || 0) === 0" class="free-badge">FREE</span>
           <span v-else class="price-amount">{{ formatPrice(product.Price || product.price) }}</span>
         </p>
-        <p class="product-description">{{ product.Description || product.Info || product.description || 'A mysterious item from the merchant\'s collection' }}</p>
+        <p class="product-info">{{ product.Info || product.info || 'A mysterious item from the merchant\'s collection' }}</p>
       </div>
     </div>
 
@@ -113,15 +113,22 @@ export default {
     }
   },
   async mounted() {
-    console.log('Products page mounted - fetching products from API')
+    console.log('Products page mounted - checking if products need to be loaded')
     
-    // Fetch products on page load
+    // Only fetch products if store is empty
     await this.loadProducts()
   },
   methods: {
     async loadProducts() {
       try {
-        await this.productsStore.fetchProducts({ fresh: true })
+        // Check if we already have products in store
+        if (this.productsStore.hasProducts) {
+          console.log('Products already in store:', this.productsStore.productsCount, 'items - skipping API call')
+          return
+        }
+        
+        console.log('No products in store - fetching from API')
+        await this.productsStore.fetchProducts()
         console.log('Products loaded successfully:', this.productsStore.productsCount, 'items')
         
         // Debug timestamp information for first product
@@ -527,7 +534,7 @@ export default {
   text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
 }
 
-.product-description {
+.product-info {
   color: var(--color-text-dark);
   margin-bottom: 1.5rem;
   line-height: 1.4;
